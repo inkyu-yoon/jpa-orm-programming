@@ -70,7 +70,7 @@ JDBC로 전달하는 쿼리가 Team과 Join하는 쿼리문이 잘 작성되어 
 
 <details>
 
-<summary><h3> 객체 지향 모델과 관계형 데이터 베이스 패러다임의 불일치 (Object–relational impedance mismatch) </h3></summary>
+<summary><h3> 객체 지향 언어와 관계형 DB 패러다임의 불일치 (Object–relational impedance mismatch) </h3></summary>
 
 객체 지향 언어와 관계형 데이터 베이스 간 개념적 차이 때문에 발생하는 문제를 의미한다.
 
@@ -144,6 +144,7 @@ Insert 해줄 때에는, `INSERT INTO MEMBER (id, team_id,username) values(?, ?,
 `member.getTeam()` 메서드를 사용했을 때, `team` 이 `null` 이 아님을 확신할 수 있을까?
 
 <br>
+    
 만약 dao의 `find` 로직 안에 sql 질의가 `team`테이블과 조인하는 sql 구문이었다면 `team` 데이터가 존재함을 알 수 있을 것이다.
 
 이렇듯, 직접 `DAO` 클래스를 찾아가서 `sql` 문을 확인해야 내가 원하는 연관된 객체의 데이터를 얻을 수 있는지 없는지를 알 수 있다.
