@@ -173,3 +173,37 @@ jdbc를 통해, 조회한 데이터의 `ResultSet` 으로 구성한 `Member`는 
 </details>
 
 </details>
+
+
+<details>
+
+<summary><h2> Chapter 2. JPA 시작 </h2></summary>
+
+<details>
+
+<summary><h3> JPQL(Java Persistence Query Language) 이란? </h3></summary>
+
+JPA를 사용하면 개발자는 엔티티 객체를 중심으로 개발하고 데이터베이스에 대한 처리는 JPA에 맡겨야 한다.
+
+JPA는 엔티티 객체를 중심으로 개발하므로 검색을 할 때도 테이블이 아닌 엔티티 객체를 대상으로 검색해야한다.
+
+<br>
+
+```java
+List<Member> members = em.createQuery("select m from Member m", Member.class)
+                		 .getResultList();
+```
+
+그럴때 사용할 수 있는 것이 **JPQL** 이다.
+
+DB마다 쿼리 문법이 다르기 때문에, 추상화한 쿼리 문법이고
+
+이 JPQL을 바탕으로 JPA는 **설정한 DB에 맞는 쿼리문을 생성하여 데이터베이스와 상호작용**한다.
+
+<br>
+
+🚨 참고로 JPQL은 대소문자를 명확히 구분한다.
+
+</details>
+
+</details>
