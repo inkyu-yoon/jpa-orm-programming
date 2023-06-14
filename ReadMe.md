@@ -315,3 +315,162 @@ JPA는 `UPDATE 엔티티 SET (모든 필드) ..` 와 같이 모든 필드를 대
 
 
 </details>
+
+
+
+<details>
+
+<summary><h2> Chapter 4. 엔티티 매핑 </h2></summary>
+
+<details>
+
+<summary><h3> @Entity</h3></summary>
+
+- `(name = "엔티티명")` : JPA에서 사용할 엔티티 이름을 지정한다. 기본값은 클래스 이름이다.
+- 파라미터가 없는 기본 생성자는 필수이다. 자바는 생성자가 아예 없는 경우 기본 생성자를 자동으로 만들지만, 파라미터가 있는 생성자가 하나라도 있을 경우 자동으로 만들어주지 않기 때문에 직접 만들어줘야 한다.
+- 저장할 필드에는 `final` 키워드를 붙여주면 안된다.
+
+</details>
+
+<details>
+
+<summary><h3> @Table</h3></summary>
+
+`(name = "엔티티명")` : 매핑할 테이블 이름을 지정한다. 생략했을 때 기본값은 엔티티 이름이다. 만약 `@Entity` 의 `name` 옵션을 사용했다면, 옵션으로 지정한 이름이 엔티티 이름이 되므로, 매핑되는 테이블 이름도 옵션으로 지정한 이름이 된다.
+
+</details>
+
+
+<details>
+
+<summary><h3> 기본키 전략 @GeneratedValue(strategy = GenerationType.{전략})</h3></summary>
+
+어노테이션을 적용해서 적절한 전략을 선택할 수 있다.
+
+1️⃣ 직접 할당
+
+- 위 어노테이션을 사용하지 않은 경우이다. 영속화 하기 전에 직접 `setId()`와 같은 방식으로 식별자 값을 입력해주어야 한다.
+
+2️⃣ **IDENTITY**
+
+- 기본 키 생성을 DB에 위임하는 전략이다. MySQL의 경우 AUTO_INCREMENT 기능이 사용된다.
+- 엔티티가 영속 상태가 되려면, **식별자는 반드시 필요**하다. 따라서, IDENTITY 전략은 DB로 부터 기본키 값을 얻어와야하기 때문에 **엔티티가 영속화 되는 시점에 바로 `INSERT` 쿼리를 실행해서 기본 키를 할당받고 DB로부터 조회하는 작업이 수반**된다.
+
+3️⃣ **SEQUENCE**
+
+-  유일한 값을 순서대로 생성하는 데이터베이스의 시퀀스를 사용한다. 시퀀스를 지원하는 DB에서 사용할 수 있다.
+
+```sql
+CREATE SEQUENCE BOARD-SEQ START WITH 1 INCREMENT BY 1;
+```
+
+위와 같이 시퀀스를 생성하고
+
+```java
+@Entity
+@SequenceGenerator(
+	name = "BOARD_SEQ_GENERATOR",
+	sequenceName = "BOARD_SEQ", // 매핑할 데이터베이스 시퀀스 이름
+	initialValue = 1, // DDL 생성 시에만 사용된다. 처음 시작하는 수
+    allocationSize = 1 // 시퀀스 한 번 호출에 증가하는 수
+)
+public class Board{
+	@Id
+	@GeneratedValue(strategy = GenerationType.SEQUENCE
+					generator = "BOARD_SEQ_GENERATOR")
+	public Long id;
+	
+}
+```
+
+위와 같이 클래스 레벨에 붙인 어노테이션인 `@SeqeunceGenerator` 로 생성한 시퀀스와 매핑한다.
+
+그리고 기본키 전략으로 `SEQUENCE`를 선택하고 생성한 시퀀스를 `generator` 옵션으로 지정한다.
+
+> allocationSize의 값과 `hibernate.id.new_generator_mappings = true` 설정을 통해서 최적화하는 방법이 있다.
+>
+> 예로, allocationSize = 50인 경우, 시퀀스를 한번에 50 증가시켜 1~50 까지는 **메모리**에서 식별자를 할당한다.
+>
+> 시퀀스 값을 선점하므로, 여러 JVM이 동시에 동작해도 기본 키 값이 충돌하지 않는 장점이 있다.
+
+4️⃣ **TABLE**
+
+키 생성 전용 테이블을 하나 만들고 데이터베이스 시퀀스를 흉내내는 전략이다.
+
+```mysql
+CREATE TABLE MY_SEQUENCES (
+	SEQUENCE_NAME VARCHAR(255) NOT NULL,
+	NEXT_VAL BIGINT,
+	PRIMARY KEY (SEQUENCE_NAME)
+)
+```
+
+`SEQUENCE_NAME`을 시퀀스 이름으로 사용하고 `NEXT_VAL` 을 시퀀스 값으로 사용한다.
+
+<br>
+
+```java
+@Entity
+@TableGenerator(
+	name = "BOARD_SEQ_GENERATOR",
+    table = "MY_SEQUENCE",
+    pkColumnValue = "BOARD_SEQ", // 키로 사용할 값 이름
+    allocationSize = 1
+)
+public class Board{
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.TABLE,
+                   generator = "BOARD_SEQ_GENERATOR")
+    private Long id;
+}
+```
+
+위와 같이 `@TableGenerator` 어노테이션을 통해서, 시퀀스 용으로 만든 테이블명과 기본
+
+5️⃣ **AUTO**
+
+선택한 데이터 베이스 방언에 따라 전략 중 하나를 자동으로 선택한다.
+
+예로, Oracle의 경우 `SEQUENCE`를 MySQL의 경우 `IDENTITY`를 사용한다.
+
+
+
+💡 **결론**
+
+영속성 컨텍스트가 엔티티를 관리하기 위해서는 식별자로 식별해야한다.
+
+직접 할당의 경우, **식별자 값을 개발자가 직접 할당**한다.
+
+**IDENTITY** 의 경우, 데이터베이스에 기본키 생성을 위임하기 때문에 **DB에 데이터를 입력 후 조회**해온다.
+
+**TABLE** 이나 **SEQUENCE** 전략의 경우 **AllocationSize에 따라 메모리에서 조회하거나 DB에서 조회**한다.
+
+
+
+
+</details>
+
+
+
+<details>
+
+<summary><h3> 자연 키와 대리 키</h3></summary>
+
+1. 자연 키 : 비즈니스에 의미가 있는 키를 의미한다. 예로, 주민등록번호, 전화번호 등이 있다.
+2. 대리 키 : 비즈니스와 관련 없는 임의로 만들어진 키를 의미한다. Auto_increment에 의해 만들어진 키가 대리 키에 해당한다.
+
+웬만하면 자연 키 보다는 대리 키를 사용하는 것이 좋다.
+
+자연 키는 미래에 변화가 생길 수 있는 여지가 있기 때문이다.
+
+김영한 개발자님의 경험에 의하면, 주민등록번호를 키 로 사용하다가 정부 정책 때문에 사용하지 못하도록 되어서 수정할 부분이 엄청나게 많았다고 하셨다.
+
+비즈니스에 무관한 키는 변경될 일이 없다.
+
+</details>
+
+
+</details>
+
+
