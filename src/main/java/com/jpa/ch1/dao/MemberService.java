@@ -31,15 +31,13 @@ public class MemberService {
 
         Member member = Member.builder()
                 .age(10)
-                .id("ID2")
-                .username("Username")
+                .id(1L)
                 .build();
 
         em.persist(member);
 
-        member.setAge(20);
 
-        Member foundMember = em.find(Member.class, "ID2");
+        Member foundMember = em.find(Member.class, 1L);
         System.out.println(foundMember);
 
         List<Member> members = em.createQuery("select m from Member m", Member.class)
