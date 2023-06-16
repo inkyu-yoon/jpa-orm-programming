@@ -567,3 +567,147 @@ JPA에서도, 연관관계 주인을 `@ManyToOne` 어노테이션을 사용하�
 
 </details>
 </details>
+
+<details>
+
+<summary><h2> Chapter 7. 고급 매핑 </h2></summary>
+
+<details>
+
+<summary><h3> 상속관계 매핑</h3></summary>
+
+
+
+1️⃣ 조인 전략
+
+```java
+@Entity
+@Inheritance(strategy = InheritanceType.JOINED)
+@DiscriminatorColumn(name = "DTYPE")
+public abstract class Item {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "item_id")
+    private Long id;
+
+    private String name;
+    private int price;
+
+}
+```
+
+위와 같이 데이터베이스의 Super-Sub 구조에서 Super에 해당하는 상위 테이블에 `@Inheritance(strategy = InheritanceType.JOINED)`  어노테이션을 붙인다.
+
+`@DiscriminatorColumn(name = "DTYPE")` 은 부모 클래스에 생기는 속성명으로, 하위 테이블을 구분할 수 있다.
+
+<br>
+
+```java
+@Entity
+@DiscriminatorValue("A")
+public class Album extends Item {
+    private String artist;
+}
+
+```
+
+하위 테이블은 `abstract` 클래스인 상위 엔티티 `Item` 을 상속한다.
+
+`@DiscriminatorValue()` 로 지정한 값으로 상위 테이블의 `@DiscriminatorColumn`로 지정한 속성명에 값으로 입력된다.
+
+
+
+<img src="https://raw.githubusercontent.com/buinq/imageServer/main/img/image-20230616120313009.png" alt="image-20230616120313009" style="zoom: 67%;" />
+
+데이터는 위와 같이, 부모 테이블의 `dtype` 속성에는 하위 테이블에서 구분자로 설정한 `A` 가 입력된다.
+
+그리고 하위 테이블에는 부모테이블의 기본키가 외래키 & 기본키 로서 사용된다.
+
+만약 하위 테이블의 `item_id` 속성명을 변경하고 싶다면 `@PrimaryKeyJoinColumn` 을 사용하면 된다.
+
+<br>
+
+하지만 위와 같은 테이블 구조는 조회 시 조인이 필요하고 쿼리가 복잡하다.
+
+그리고 테이블 2개에 각각 데이터를 입력해야하므로 insert 쿼리가 2번 발생한다.
+
+<br>
+
+2️⃣ 단일 테이블 전략
+
+단일 테이블 전략은 `@Inheritance(strategy = InheritanceType.SINGLE_TABLE)` 어노테이션을 사용하면 된다.
+
+<img src="https://raw.githubusercontent.com/buinq/imageServer/main/img/image-20230616120857093.png" alt="image-20230616120857093" style="zoom:67%;" />
+
+단일 테이블 전략은, 테이블이 하나만 생성되고 하위 엔티티와 상위 엔티티의 모든 속성이 한 테이블에 존재하게 된다.
+
+한 테이블에 같이 있기 때문에, `@DiscriminatorColumn` 으로 레코드간 구분할 수 있도록 해야하며
+
+하위 엔티티 마다 갖고 있는 속성이 다르기 때문에, null 데이터가 존재하게 된다.
+
+<img src="https://raw.githubusercontent.com/buinq/imageServer/main/img/image-20230616121319665.png" alt="image-20230616121319665" style="zoom:80%;" />
+
+예를 들어, 책에는 `artist` 필드가 없고 앨범에는 `isbn` 필드가 없기 때문에 null 값이 테이블에 존재하게 된다.
+
+조인이 필요없다는 장점이 있지만, 속성이 너무 많아지면 조회 성능이 느려질 수 있고 null 을 허용해야한다.
+
+
+
+<br>
+
+3️⃣ 구현 클래스마다 테이블 전략
+
+`@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)` 어노테이션을 사용하면 된다.
+
+이 전략은 하위 엔티티마다 테이블을 생성한다.
+
+</details>
+
+<details>
+
+<summary><h3> @MappedSuperclass</h3></summary>
+
+공통되는 속성을 엔티티에 제공할 수 있다.
+
+예를 들어 레코드 별 데이터 입력 시간과 삭제 시간 칼럼이 필요한 경우
+
+엔티티 마다, `createdDate` 필드를 각각 추가하기보다는
+
+`createdDate` 필드를 가진 `BaseEntity` 클래스를 하나 생성하고 `@MappedSuperclass` 어노테이션을 사용한다.
+
+그리고 이 어노테이션이 적용된 `BaseEntity` 를 상속하도록 하면, DDL에 의해 생성된 각 테이블에는 `BaseEntity` 에 정의된 속성이 생성되게 된다.
+
+</details>
+
+<details>
+
+<summary><h3> 복합키</h3></summary>
+
+복합키란, 기본키의 역할을 하는 컬럼이 2개 이상인 것을 말한다.
+
+JPA에서 복합키를 사용하기 위해서는 `Serializable` 인터페이스를 구현하는 식별자 클래스를 따로 정의해야한다.
+
+그리고, 조회 시 `em.find(엔티티.class, 식별자 인스턴스)` 로 조회할 수 있다.
+
+식별자 인스턴스는 복합키에 해당하는 필드에 적절한 값이 입력되어 있어야 한다.
+
+`@IdClass` 혹은 `@EmbeddedId` 어노테이션을 활용해서 구현할 수 있다.
+
+</details>
+
+<details>
+
+<summary><h3> 식별 관계 vs 비식별 관계</h3></summary>
+
+먼저, 식별 관계는 상위 테이블의 키를 하위 테이블의 기본키로 계속 전달하는 것이고
+
+비식별 관계는 상위 테이블의 키를 외래키로서 속성으로 사용하는 관계이다.
+
+<br>
+
+식별 관계는 하위 테이블로 내려갈 수록 복합키의 크기가 커지고 변화가 필요한 경우 전파되는 영역이 커진다는 단점이 있다.
+
+하지만, 기본 키 인덱스를 활용해서 조회 성능에서 이점이 있는 경우도 있다.
+
+</details>
+</details>
