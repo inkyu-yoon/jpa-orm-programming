@@ -711,3 +711,268 @@ JPA에서 복합키를 사용하기 위해서는 `Serializable` 인터페이스�
 
 </details>
 </details>
+
+
+<details>
+
+<summary><h2> Chapter 8. 프록시와 연관관계 관리 </h2></summary>
+
+<details>
+
+<summary><h3> 지연 로딩</h3></summary>
+
+객체가 연관관계가 있는 객체의 정보는 사용하지 않는 경우가 있다.
+
+이런 경우에도 연관관계가 있는 객체의 정보까지 `join` 해서 가져온다면 효율적이지 않다.
+
+```java
+@Getter
+@Entity
+public class Member {
+
+    @Id
+    @Column(name = "member_id")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+
+    @ManyToOne
+    @JoinColumn(name = "team_id")
+    private Team team;
+}
+```
+
+위와 같은 `Member` 엔티티에서 `member.getTeam().getTeamName()` 과 같이 연관된 객체를 구체적으로 활용하는 경우에만 추가적으로 쿼리를 날려서 정보를 가져오는 **지연로딩** 기능을 제공한다.
+
+<br>
+
+이러한 방법은 프록시 객체를 사용함으로서 가능해진다.
+
+`Team` 객체를 상속해서 같은 메서드를 갖는 가짜 객체를 생성한다.
+
+그리고 그 가짜 객체가 `Member` 안에 포함되어 있고, 가짜 객체의 메서드를 호출하는 시점에서 DB에 조회 쿼리를 전달하고 실제 정보를 반환하는 방식이다.
+
+<br>
+
+1. 엔티티의 필드 정보를 요청한다.
+2. 프록시 객체 상태인 경우, 데이터가 존재하지 않기 때문에 영속성 컨텍스트에 엔티티 생성을 요청한다.
+3. 영속성 컨텍스트는 DB에 조회 쿼리를 실행시켜 엔티티 객체를 생성한다.
+4. 프록시 객체는 생성된 엔티티 객체를 타겟으로 초기화 하고, 타겟이 가진 메서드를 실행시켜 결과를 반환한다.
+
+위와 같은 방식으로 지연 로딩이 이루어진다.
+
+</details>
+
+<details>
+
+<summary><h3> 식별자 값을 이용한 쿼리 최적화</h3></summary>
+
+연관관계를 맺을 객체의 식별자를 알고 있다면, 추가적인 쿼리를 보내지 않을 수 있다.
+
+데이터베이스상, 외래키를 갖는 객체의 테이블에는 외래키만 입력해주면 된다.
+
+따라서
+
+```java
+@Getter
+@Entity
+public class Member {
+
+    @Id
+    @Column(name = "member_id")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+
+    @ManyToOne
+    @JoinColumn(name = "team_id")
+    private Team team;
+}
+```
+
+위와 같은 엔티티에서
+
+<br>
+
+```java
+Member member = em.find(Member.class, "member1");
+Team team = em.getReference(Team.class, "team1");
+member.setTeam(team);
+```
+
+과 같은 방식으로 team을 식별자로서 프록시 객체로 초기화 하고
+
+member 에 연관관계를 맺어주면, team을 실제 db에서 조회하지 않고 연관관계를 맺어줄 수 있다.
+
+<br>
+
+```java
+Member member = em.find(Member.class, "member1");
+Team team = em.find(Team.class, "team1");
+member.setTeam(team);
+```
+
+만약 위와 같았다면, team을 db에서 조회해서 연관관계를 맺어주므로 select 쿼리가 2번 발생하게 된다.
+
+
+
+</details>
+
+<details>
+
+<summary><h3> 즉시 로딩과 지연 로딩</h3></summary>
+
+**즉시 로딩**은 엔티티를 조회할 때 연관된 엔티티도 함께 조회한다.
+
+보통, 즉시 로딩을 최적화 하기 위해 가능하면 조인 쿼리를 사용해서 조회한다.
+
+<br>
+
+**지연 로딩**은 연관된 엔티티를 실제 사용할 때 조회한다.
+
+<br>
+
+**즉시 로딩**의 경우 연관된 객체에 `(fetch = FetchType.EAGER)` 를 사용하고 지연 로딩의 경우 `(fetch = FetchType.LAZY)`를 사용한다.
+
+<br>
+
+일반적으로 **즉시 로딩을 사용하는 경우, OUTER 조인**을 사용한다.
+
+그 이유는, `Member` 를 조회할 때, 외래키(`team_id`)가 존재하지 않는 엔티티가 있을 수 있고 **INNER 조인을 사용하는 경우 `Member` 엔티티를 조회할 수 없기 때문**이다.
+
+이러한 경우는 외래키에 해당하는 속성이 null 을 허용하는 경우 발생하므로
+
+```
+@ManyToOne(fetch = FetchType.EAGER)
+@JoinColumn(name = "team_id", nullable = false)
+```
+
+위와 같이 **외래키가 null인 경우는 존재하지 않는다**라는 것을 명시해주면
+
+조회하는 엔티티가 **누락되는 경우가 존재하지 않게 되므로 INNER 조인을 사용**하게 된다.
+
+<br>
+
+즉시 로딩은 연관객체가 자주 사용되는 경우라면, 한번의 쿼리로 조인해서 가져오기 때문에 지연 로딩보다 좋다.
+
+하지만, 자주 사용되지 않는 경우라면 불필요한 조인을 하기 때문에 지연 로딩을 하는 것이 좋다.
+
+<br>
+
+참고로, `@ManyToOne` 혹은 `@OneToOne` 의 경우 기본 전략이 즉시 로딩이고
+
+`@OneToMany` 혹은 `@ManyToMany` 의 경우 기본 전략이 지연 로딩이다.
+
+
+
+</details>
+
+<details>
+
+<summary><h3> 영속성 전이 (Cascade) </h3></summary>
+
+연관관계가 존재하는 엔티티를 영속화 하기 위해서는 연관관계에 해당하는 모든 엔티티를 `persist()` 를 통해 영속화 시켜야한다.
+
+```java
+Member member = new Member();
+Team team = new Team();
+
+em.persist(team);
+
+member.setTeam(team);
+em.persist(member);
+```
+
+위와 같이 `Member`가 참조하는 `Team` 을 영속화 시킨 후, `Member`에 할당하고 `Member` 도 영속화 시킴으로서 DB에 반영된다.
+
+
+
+JPA는 영속성 전이 기능을 통해서 한번에 영속화 할 수 있는 기능이 있다.
+
+```java
+@Entity
+@Setter
+public class Member {
+
+    @Id
+    @Column(name = "member_id")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+
+    @ManyToOne(cascade = CascadeType.PERSIST)
+    @JoinColumn(name = "team_id")
+    private Team team;
+}
+```
+
+위와 같이 `@ManyToOne(cascade = CascadeType.PERSIST)` 옵션을 붙이면
+
+설정한 엔티티까지 함께 영속화해서 저장한다.
+
+<br>
+
+```java
+Member member = new Member();
+Team team = new Team();
+member.setTeam(team);
+
+em.persist(member);
+```
+
+따라서 위와 같은 코드에서도, `team` 객체를 `persist()`로 명시적으로 영속화 시키지 않아도 영속화가 이루어진다.
+
+<br>
+
+이와 유사하게 `(cascade = CascadeType.REMOVE)` 옵션을 사용하면 삭제를 전파할 수 있다.
+
+
+
+만약 연관관계의 주인이 아닌 `다` 쪽에 `CasCadeType.PERSIST` 옵션을 붙이면
+
+```java
+Member member = new Member();
+Team team = new Team();
+team.getMembers().add(member);
+
+em.persist(team);
+```
+
+위와 같은 코드는 `member` 와 `team` 이 DB에 등록되지만, `member` 는 자신이 어떤 `team` 을 참조하는지 모르기 때문에 외래키에 `null` 이 입력된다.
+
+따라서,
+
+```java
+Member member = new Member();
+Team team = new Team();
+member.setTeam(team);
+team.getMembers().add(member);
+
+em.persist(team);
+```
+
+위와 같이 `member` 에도 어떤 `team`을 참조하는지 세팅을 해주어야 한다.
+
+따라서, 연관관계의 주인(일반적으로 일대다에서 `다` 쪽)에 영속성 전이 설정을 해두는 것이 더 편해보인다.
+
+</details>
+
+<details>
+
+<summary><h3> 고아 객체 (orphanRemoval)</h3></summary>
+
+고아 객체란 어디에서도 참조되지 않는 객체를 말한다.
+
+예를 들어, `Team`과 `Member` 사이에서 `Team` 이 관리하는 `List<Member> members` 에서 특정 멤버를 제거하면 `member`를 참조하는 객체는 사라진다.
+
+그러면 실제로 `delete` 쿼리를 날려 해당 `member` 데이터를 삭제한다.
+
+<br>
+
+다대일 관계에서 `다` 쪽에서 참조하는 `일` 에 해당하는 객체에는 적용될 수 없는게, 다른 엔티티가 참조하고 있으므로 참조가 사라진것이 아니기 때문이다.
+
+</details>
+</details>
