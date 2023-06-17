@@ -976,3 +976,38 @@ em.persist(team);
 
 </details>
 </details>
+
+
+
+<details>
+
+<summary><h2> Chapter 9. 값 타입 </h2></summary>
+
+<details>
+
+<summary><h3> @Embedded 와 @MappedSuperclass 의 차이</h3></summary>
+
+둘 다 특정 필드를 객체로 관리하고, 이 객체를 사용하는 엔티티의 테이블에 속성이 추가된다는 공통점이 있다.
+
+언뜻 비슷해보이지만, 구별해야할 점이 `@Embedded`는 값, 그 자체에 집중한다는 점이다.
+
+`@MappedSuperclass` 의 경우 클래스에 붙이고, 이를 사용하는 엔티티는 해당 클래스를 상속받게 된다.
+
+따라서, `@MappedSuperclass` 가 있는 클래스에 정의된 어노테이션이나 메서드를 사용할 수 있다.
+
+하지만, `@Embedded` 가 있는 클래스에 정의되어 있는 어노테이션이나 메서드를, 사용하는 엔티티는 엔티티 레벨에서 사용할 수 없고
+
+특정 기능을 수행하는 어노테이션의 기능 역시 전달되지 않는다.
+
+<br>
+
+따라서 `@Embedded` 는 관계가 밀접한 필드들을 묶어서 관리할 수 있고 다른 엔티티에도 쓰이는 경우에 재사용할 수 있는 장점이 있는것이고
+
+`@MappedSuperclass`의 경우 상위 클래스에서 정의한 기능이나 속성 등을 전달하는 데에 더 목적이 있다.
+
+
+
+
+
+</details>
+</details>
