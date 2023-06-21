@@ -1011,3 +1011,74 @@ em.persist(team);
 
 </details>
 </details>
+
+<details>
+
+<summary><h2> Chapter 10. 객체지향 쿼리 언어 </h2></summary>
+
+<details>
+
+<summary><h3> Querydsl 사용하는 이유</h3></summary>
+
+문자가 아닌 프로그래밍 코드로 JPQL을 작성할 수 있다.
+
+문자열로 작성한 JPQL에 오타가 있어도 컴파일은 성공하고 애플리케이션을 서버에 배포할 수 있다.
+
+배포되고 나서 해당 JPQL을 실행하는 쿼리가 전송되면 그제서야 오류를 파악하게 된다.
+
+<br>
+
+따라서, JPQL 빌더인 Querydsl을 사용하 컴파일 시점에 오류를 발견할 수 있고 동적 쿼리를 작성하기 편하다는 장점이 있다.
+
+
+</details>
+
+<summary><h3> JPQL 기본</h3></summary>
+
+
+
+1️⃣ 조회
+
+```
+SELECT m FROM Member AS m where m.username = 'inkyu' //올바른 문법
+
+SELECT username FROM Member AS m // m.username 이라고 해야한다.
+```
+
+<br>JPQL에서는 기본적으로 엔티티 명을 사용하며 별칭을 필수로 사용해야한다.
+
+
+
+<br>
+
+반환되는 결과를 명확하게 타입으로 지정할 수 있으면 `TypeQuery` 객체를 사용한다.
+
+```java
+TypedQuery<Member> query = em.createQuery("SELECT m FROM Member AS m",Member.class); // 2번째 파라미터로 반환될 클래스 지정
+
+List<Member> resultList = query.getResultList();
+```
+
+<br>
+
+반환되는 결과가 둘 이상이거나 명확하지 않으면 `Query` 객체를 사용한다.
+
+```java
+Query query = em.createQuery("SELECT m.username, m.age from Member m");
+List resultList = query.getResultList();
+
+for(Object o : resultList){
+    Object [] result = (Object[]) o;
+    System.out.println("username = " + result[0]);
+    System.out.println("age = " + result[1]);
+}
+```
+
+반환되는 결과가 여러 개인 경우 `Object[]` 로 형 변환 후 사용하면 된다.
+
+
+
+</details>
+
+
+</details>
