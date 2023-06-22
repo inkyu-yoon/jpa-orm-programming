@@ -1033,6 +1033,8 @@ em.persist(team);
 
 </details>
 
+<details>
+
 <summary><h3> JPQL 기본</h3></summary>
 
 
@@ -1080,5 +1082,88 @@ for(Object o : resultList){
 
 </details>
 
+<details>
+
+<summary><h3> 파라미터 바인딩</h3></summary>
+
+
+``` java
+TypedQuery<Member> query = em.createQuery("SELECT m FROM Member AS m where m.username = :username",Member.class); 
+query.setParameter("username",usernameParam);
+
+List<Member> resultList = query.getResultList();
+```
+
+바인딩할 파라미터에 `:` 를 붙여주고, `.setParameter()` 메서드를 통해 바인딩 시켜주면 된다.
+
+</details>
+
+<details>
+
+<summary><h3> 조회 결과를 DTO에 바로 매핑하기</h3></summary>
+
+
+```java
+TypedQuery<UserDto> query = em.createQuery("SELECT new jpabook.jpql.UserDTO(m.username, m.age) FROM Member m", UserDTO.class);
+```
+
+`new` 라는 키워드와 매핑할 DTO가 있는 패키지 경로를 지정해주어야 하고, 당연히 파라미터 순서와 타입에 일치하는 생성자도 존재해야 한다.
+
+
+
+</details>
+
+<details>
+
+<summary><h3> Fetch Join (페치 조인)</h3></summary>
+
+
+연관된 엔티티나 컬렉션을 한 번에 같이 조회하는 기능이다.
+
+
+
+```java
+SELECT m from Member m join fetch m.team // m.team 에 별칭을 붙이지 않음
+```
+
+다대일 관계에서, 위와 같은 JPQL로 페치 조인을 하면
+
+| ID   | NAME  | TEAM_ID | ID   | NAME |
+| ---- | ----- | ------- | ---- | ---- |
+| 1    | 회원1 | 1       | 1    | 팀1  |
+| 2    | 회원2 | 1       | 1    | 팀1  |
+| 3    | 회원3 | 2       | 2    | 팀2  |
+
+
+
+위와 같이 연관된 엔티티가 합쳐진 결과 테이블이 반환된다고 볼 수 있다.
+
+하나의 쿼리로 일대다 관계에서 연관된 모든 데이터를 가져올 수 있으므로 성능 향상의 방법으로 사용될 수 있다.
+
+따라서, 페치 조인을 사용하면 연관된 객체를 프록시 상태로 관리하는 지연로딩이 아니라, 실제 엔티티로 보관하고 있게 된다.
+
+</details>
+
+<details>
+
+<summary><h3> 연관된 객체 필드 탐색</h3></summary>
+
+
+```java
+SELECT t.members from Team t // 성공
+SELECT t.members.username from Team t // 실패
+```
+
+위 구문 중, 아래 구문은 실패하게 된다.
+
+일대다 관계에서 `다` 에 해당하는 연관된 컬렉션에 접근하는 경우, 조인 구문을 통해 별칭을 획득하고 사용해야한다.
+
+```java
+SELECT m.username from Team t JOIN t.members m
+```
+
+위와 같이 작성해야 한다.
+
+</details>
 
 </details>
